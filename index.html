@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주택담보대출 계산기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1917;
+    --text2: #6b6860;
+    --text3: #9b9890;
+    --blue: #1a56db;
+    --blue-bg: #eff4ff;
+    --blue-text: #1e40af;
+    --orange: #b45309;
+    --orange-bg: #fffbeb;
+    --orange-text: #92400e;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+  header p { font-size: 12px; color: var(--text3); }
+
+  .container { max-width: 880px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media(max-width: 640px){ .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text2); }
+  .field input, .field select {
+    height: 38px;
+    padding: 0 11px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--blue); }
+
+  .fields-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+
+  /* method buttons */
+  .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .method-btn {
+    padding: 11px 10px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .method-btn .m-title { font-size: 13px; font-weight: 500; color: var(--text); display: block; }
+  .method-btn .m-sub { font-size: 11px; color: var(--text3); display: block; margin-top: 2px; }
+  .method-btn.active {
+    border-color: var(--blue);
+    background: var(--blue-bg);
+  }
+  .method-btn.active .m-title { color: var(--blue-text); }
+  .method-btn.active .m-sub { color: var(--blue-text); opacity: .7; }
+
+  /* grace */
+  .grace-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--orange-bg);
+    border: 1px solid rgba(180,83,9,.15);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--orange-text);
+    margin-top: 10px;
+  }
+
+  /* rates */
+  .rate-item {
+    display: grid;
+    grid-template-columns: 72px 1fr 1fr 28px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .rate-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text2);
+    text-align: center;
+  }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 18px; line-height: 1; padding: 0;
+    transition: color .15s;
+  }
+  .del-btn:hover { color: #dc2626; }
+  .add-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text3);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 2px;
+    transition: all .15s;
+  }
+  .add-btn:hover { background: var(--surface2); color: var(--text2); }
+
+  /* calc button */
+  .calc-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: -.01em;
+    transition: opacity .15s;
+    margin-bottom: 2rem;
+  }
+  .calc-btn:hover { opacity: .85; }
+
+  /* metrics */
+  .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1rem; }
+  @media(min-width: 600px){ .metrics { grid-template-columns: repeat(4, 1fr); } }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .875rem 1rem;
+  }
+  .metric .m-lbl { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .metric .m-val { font-size: 17px; font-weight: 600; color: var(--text); }
+  .metric .m-val.blue { color: var(--blue-text); }
+  .metric .m-val.orange { color: var(--orange); }
+  .metric .m-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  /* results card */
+  .result-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+  }
+
+  /* tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; }
+  .tab {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text2);
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .tab.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: var(--text2); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+  .leg-ln { width: 18px; height: 2px; display: inline-block; border-radius: 1px; flex-shrink: 0; }
+
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* table */
+  .tbl-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    position: sticky; top: 0;
+    background: var(--surface2);
+    padding: 8px 10px;
+    text-align: right;
+    font-weight: 500;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    z-index: 1;
+  }
+  th:first-child { text-align: center; }
+  td {
+    padding: 6px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  td:first-child { text-align: center; color: var(--text3); }
+  tr:last-child td { border-bottom: none; }
+  tr.row-paid td { color: var(--text3); }
+  tr.row-current td { background: var(--blue-bg); color: var(--blue-text) !important; font-weight: 500; }
+  tr.row-grace:not(.row-paid):not(.row-current) td { background: var(--orange-bg); }
+  tr.row-divider td { background: var(--surface2); text-align: center; font-size: 11px; color: var(--text3); padding: 5px; }
+
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; }
+  .dot-green { background: #16a34a; }
+  .dot-orange { background: #d97706; }
+  .dot-gray { background: #d1d5db; }
+
+  .tbl-legend { display: flex; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--text2); flex-wrap: wrap; }
+  .tbl-legend span { display: flex; align-items: center; }
+
+  #results { display: none; }
+  #graceBadge { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>주택담보대출 계산기</h1>
+  <p>거치기간 · 변동금리 · 원금/원리금균등 지원</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">대출 기본 정보</div>
+    <div class="fields-row">
+      <div class="field"><label>대출 원금 (만원)</label><input type="number" id="principal" value="30000" min="100" step="100"></div>
+      <div class="field"><label>대출 기간 (개월)</label><input type="number" id="term" value="360" min="12" max="600" step="12"></div>
+      <div class="field"><label>대출 시작 연월</label><input type="month" id="startDate" value="2024-01"></div>
+      <div class="field"><label>현재 기준 연월</label><input type="month" id="currentDate" value="2025-03"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">거치 및 상환 방식</div>
+    <div class="fields-row" style="margin-bottom:0">
+      <div class="field" style="max-width:200px">
+        <label>거치기간 (개월, 최대 36)</label>
+        <input type="number" id="grace" value="0" min="0" max="36" step="1" oninput="clampGrace(this)">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <span id="graceBadge" class="grace-note">거치기간 동안 이자만 납부</span>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="card-title" style="margin-bottom:.75rem">거치 후 상환 방식</div>
+      <div class="method-grid">
+        <button class="method-btn active" id="btn_equal_principal" onclick="selectMethod('equal_principal',this)">
+          <span class="m-title">원금균등상환</span>
+          <span class="m-sub">매월 원금을 동일하게 납부. 초기 부담 높고 점차 감소.</span>
+        </button>
+        <button class="method-btn" id="btn_equal_payment" onclick="selectMethod('equal_payment',this)">
+          <span class="m-title">원리금균등상환</span>
+          <span class="m-sub">매월 동일한 금액 납부. 예산 계획에 유리.</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">금리 설정 <span style="font-weight:400;opacity:.7;text-transform:none;letter-spacing:0;font-size:11px">변동 시점 추가로 구간별 금리 반영</span></div>
+    <div id="rateList"></div>
+    <button class="add-btn" onclick="addRate()">+ 금리 변동 추가</button>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">계산하기</button>
+
+  <div id="results">
+    <div class="metrics" id="metricCards"></div>
+
+    <div class="result-card">
+      <div class="tabs">
+        <button class="tab active" id="tabChart" onclick="switchTab('chart',this)">차트</button>
+        <button class="tab" id="tabTable" onclick="switchTab('table',this)">월별 상환 내역</button>
+      </div>
+
+      <div id="chartView">
+        <div class="legend" id="chartLegend">
+          <span><span class="leg-sq" style="background:#1a56db"></span>원금</span>
+          <span><span class="leg-sq" style="background:#d85a30"></span>이자</span>
+          <span><span class="leg-ln" style="background:#9ca3af"></span>잔여원금</span>
+          <span id="graceLegend" style="display:none"><span class="leg-sq" style="background:#f59e0b;opacity:.5"></span>거치기간 이자</span>
+        </div>
+        <div class="chart-wrap"><canvas id="stackChart"></canvas></div>
+      </div>
+
+      <div id="tableView" style="display:none">
+        <div class="tbl-legend">
+          <span><span class="dot dot-green" style="margin-right:4px"></span>납부완료</span>
+          <span><span class="dot dot-orange" style="margin-right:4px"></span>거치기간</span>
+          <span><span class="dot dot-gray" style="margin-right:4px"></span>미납</span>
+          <span style="color:#1e40af">■ 현재 월</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th style="text-align:center">회차</th>
+              <th>납부월</th>
+              <th>구간</th>
+              <th>금리(%)</th>
+              <th>월 납부액</th>
+              <th>원금</th>
+              <th>이자</th>
+              <th>잔여원금</th>
+            </tr></thead>
+            <tbody id="schedBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let method = 'equal_principal';
+let rates = [{month:'2024-01', rate:'3.5'}];
+let chartInst = null;
+
+function clampGrace(el){
+  if(parseInt(el.value)>36) el.value=36;
+  if(parseInt(el.value)<0||isNaN(parseInt(el.value))) el.value=0;
+  document.getElementById('graceBadge').style.display = parseInt(el.value)>0?'inline-flex':'none';
+}
+
+function selectMethod(m, el){
+  method = m;
+  document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function renderRateList(){
+  document.getElementById('rateList').innerHTML = rates.map((r,i)=>`
+    <div class="rate-item">
+      <span class="rate-tag">${i===0?'초기 금리':'변경'}</span>
+      <div class="field" style="margin:0"><input type="month" value="${r.month}" onchange="rates[${i}].month=this.value" ${i===0?'disabled':''}></div>
+      <div class="field" style="margin:0;position:relative">
+        <input type="number" value="${r.rate}" step="0.01" min="0.1" max="30" onchange="rates[${i}].rate=this.value" placeholder="연이율">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:#9b9890;pointer-events:none">%</span>
+      </div>
+      ${i===0?'<span></span>':`<button class="del-btn" onclick="rates.splice(${i},1);renderRateList()">×</button>`}
+    </div>
+  `).join('');
+}
+
+function addRate(){
+  const last = rates[rates.length-1].month;
+  const d = new Date(last+'-01'); d.setMonth(d.getMonth()+1);
+  rates.push({month:d.toISOString().slice(0,7), rate:rates[rates.length-1].rate});
+  renderRateList();
+}
+
+function addMonths(base,n){
+  const d=new Date(base+'-01'); d.setMonth(d.getMonth()+n);
+  return d.toISOString().slice(0,7);
+}
+function getRateForMonth(m){
+  let r=parseFloat(rates[0].rate);
+  for(let i=1;i<rates.length;i++) if(m>=rates[i].month) r=parseFloat(rates[i].rate);
+  return r;
+}
+function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+function calculate(){
+  const P = parseFloat(document.getElementById('principal').value)*10000;
+  const totalMonths = parseInt(document.getElementById('term').value);
+  const grace = Math.min(36, Math.max(0, parseInt(document.getElementById('grace').value)||0));
+  const start = document.getElementById('startDate').value;
+  const current = document.getElementById('currentDate').value;
+  const repayMonths = totalMonths - grace;
+
+  let schedule=[], balance=P;
+
+  for(let i=1;i<=totalMonths;i++){
+    const monthStr=addMonths(start,i-1);
+    const annualRate=getRateForMonth(monthStr);
+    const r=annualRate/100/12;
+    const isGrace=i<=grace;
+    let principal,interest,payment;
+
+    if(isGrace){
+      interest=balance*r; principal=0; payment=interest;
+    } else {
+      const ri=i-grace;
+      if(method==='equal_principal'){
+        principal=P/repayMonths; interest=balance*r; payment=principal+interest;
+      } else {
+        if(r===0){ payment=balance/repayMonths; interest=0; principal=payment; }
+        else {
+          const rem=repayMonths-(ri-1);
+          payment=balance*r*Math.pow(1+r,rem)/(Math.pow(1+r,rem)-1);
+        }
+        interest=balance*r; principal=payment-interest;
+      }
+    }
+    balance=Math.max(0,balance-principal);
+    schedule.push({n:i,month:monthStr,rate:annualRate,isGrace,payment,principal,interest,balance});
+  }
+
+  const paid=schedule.filter(r=>r.month<current);
+  const paidTotal=paid.reduce((a,r)=>a+r.payment,0);
+  const paidPrincipal=paid.reduce((a,r)=>a+r.principal,0);
+  const paidInterest=paid.reduce((a,r)=>a+r.interest,0);
+  const totalInterest=schedule.reduce((a,r)=>a+r.interest,0);
+  const remaining=schedule.filter(r=>r.month>=current);
+  const remainingPayment=remaining.reduce((a,r)=>a+r.payment,0);
+  const graceTotal=schedule.filter(r=>r.isGrace).reduce((a,r)=>a+r.interest,0);
+
+  document.getElementById('metricCards').innerHTML=`
+    <div class="metric"><div class="m-lbl">총 납부 예정액</div><div class="m-val">${fmt((P+totalInterest)/10000)}만원</div><div class="m-sub">원금 ${fmt(P/10000)} + 이자 ${fmt(totalInterest/10000)}</div></div>
+    <div class="metric"><div class="m-lbl">총 이자</div><div class="m-val orange">${fmt(totalInterest/10000)}만원</div><div class="m-sub">거치 이자 ${fmt(graceTotal/10000)}만원 포함</div></div>
+    <div class="metric"><div class="m-lbl">납부 완료</div><div class="m-val blue">${fmt(paidTotal/10000)}만원</div><div class="m-sub">원금 ${fmt(paidPrincipal/10000)} + 이자 ${fmt(paidInterest/10000)}</div></div>
+    <div class="metric"><div class="m-lbl">남은 상환액</div><div class="m-val">${fmt(remainingPayment/10000)}만원</div><div class="m-sub">잔여 ${remaining.length}회 / 전체 ${totalMonths}회</div></div>
+  `;
+
+  let rows='', prevIsGrace=null;
+  schedule.forEach(row=>{
+    if(prevIsGrace===true&&!row.isGrace){
+      rows+=`<tr class="row-divider"><td colspan="8">── 거치기간 종료 · 원금 상환 시작 ──</td></tr>`;
+    }
+    const isPaid=row.month<current, isCurrent=row.month===current;
+    let cls=isCurrent?'row-current':(row.isGrace&&!isPaid?'row-grace':(isPaid?'row-paid':''));
+    let dot=isPaid?'dot-green':(row.isGrace?'dot-orange':'dot-gray');
+    rows+=`<tr class="${cls}">
+      <td><span class="dot ${dot}"></span>${row.n}</td>
+      <td>${row.month}</td>
+      <td>${row.isGrace?'거치':'상환'}</td>
+      <td>${row.rate.toFixed(2)}</td>
+      <td>${fmt(row.payment/10000)}</td>
+      <td>${row.isGrace?'-':fmt(row.principal/10000)}</td>
+      <td>${fmt(row.interest/10000)}</td>
+      <td>${fmt(row.balance/10000)}</td>
+    </tr>`;
+    prevIsGrace=row.isGrace;
+  });
+  document.getElementById('schedBody').innerHTML=rows;
+
+  buildChart(schedule, grace);
+  document.getElementById('results').style.display='block';
+  document.getElementById('graceLegend').style.display=grace>0?'flex':'none';
+  switchTab('chart', document.getElementById('tabChart'));
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function buildChart(schedule, grace){
+  if(chartInst){ chartInst.destroy(); chartInst=null; }
+  const step=Math.max(1,Math.floor(schedule.length/30));
+  const filtered=schedule.filter((_,i)=>i%step===0||i===schedule.length-1);
+  chartInst=new Chart(document.getElementById('stackChart'),{
+    type:'bar',
+    data:{
+      labels:filtered.map(r=>r.month),
+      datasets:[
+        {label:'원금',data:filtered.map(r=>Math.round(r.principal/10000)),backgroundColor:'#1a56db',stack:'a',barPercentage:.9},
+        {label:'이자',data:filtered.map(r=>Math.round(r.interest/10000)),backgroundColor:'#d85a30',stack:'a',barPercentage:.9},
+        {label:'거치이자',data:filtered.map(r=>r.isGrace?Math.round(r.interest/10000):0),backgroundColor:'rgba(245,158,11,0.4)',stack:'b',barPercentage:.9},
+        {label:'잔여원금',data:filtered.map(r=>Math.round(r.balance/10000)),type:'line',borderColor:'#9ca3af',backgroundColor:'transparent',pointRadius:0,borderWidth:1.5,yAxisID:'y1',order:-1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y?.toLocaleString('ko-KR')}만원`}}},
+      scales:{
+        x:{stacked:true,ticks:{font:{size:10},maxRotation:45,maxTicksLimit:14},grid:{display:false}},
+        y:{stacked:true,ticks:{font:{size:11},callback:v=>v+'만'},grid:{color:'rgba(0,0,0,0.06)'}},
+        y1:{position:'right',ticks:{font:{size:11},callback:v=>v+'만'},grid:{display:false}}
+      }
+    }
+  });
+}
+
+function switchTab(t,el){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('chartView').style.display=t==='chart'?'block':'none';
+  document.getElementById('tableView').style.display=t==='table'?'block':'none';
+}
+
+renderRateList();
+</script>
+</body>
+</html>
